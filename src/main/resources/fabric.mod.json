@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "id": "buster",
+  "version": "${version}",
+  "name": "buster",
+  "description": "A hack for crystal hvh",
+  "authors": [
+    "slmpc"
+  ],
+  "contact": {
+  },
+  "license": "GPL-3.0",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "dev.output.buster.Buster::INSTANCE"
+    ]
+  },
+  "mixins": [
+    "buster.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.6",
+    "fabric": "*",
+    "minecraft": "1.20.1"
+  }
+}

@@ -1,0 +1,150 @@
+package dev.output.buster.gui.clickgui
+
+import dev.output.buster.module.Module
+import dev.output.buster.gui.clickgui.impl.BindBox
+import dev.output.buster.gui.clickgui.impl.CheckBox
+import dev.output.buster.gui.clickgui.impl.ModeBox
+import dev.output.buster.gui.clickgui.impl.Slider
+import dev.output.buster.module.impl.client.ClickGUI
+import dev.output.buster.settings.BooleanSetting
+import dev.output.buster.settings.EnumSetting
+import dev.output.buster.settings.KeyBindSetting
+import dev.output.buster.settings.NumberSetting
+import dev.output.buster.util.graphics.Render2DUtils
+import dev.output.buster.util.graphics.color.ColorRGB
+import dev.output.buster.util.Wrapper.mc
+import dev.output.buster.util.font.TextUtils
+import net.minecraft.client.gui.DrawContext
+
+class ModuleButton(val module: Module, val parent: CategoryPanel, var offset: Float) {
+
+    val components: MutableList<Component> = arrayListOf()
+    var extended: Boolean = false
+    var textOffset = (parent.height / 2) - mc.textRenderer.fontHeight / 2
+    var setOffset = parent.height
+
+    init {
+        var setOffset = parent.height
+        for (setting in module.settings) {
+            when (setting) {
+                is NumberSetting -> {
+                    components.add(Slider(setting, this, setOffset, parent.height))
+                    setOffset += parent.height
+                }
+                is BooleanSetting -> {
+                    components.add(CheckBox(setting, this, setOffset, parent.height))
+                    setOffset += parent.height
+                }
+                is EnumSetting<*> -> {
+                    components.add(ModeBox(setting, this, setOffset, parent.height))
+                    setOffset += parent.height
+                }
+                is KeyBindSetting -> {
+                    components.add(BindBox(setting, this, setOffset, parent.height))
+                    setOffset += parent.height
+                }
+            }
+        }
+    }
+
+    fun refreshHeight() {
+        parent.componentsHeight += parent.height
+
+        if (extended) components.forEach {
+            if (it.setting.visibility.invoke()) parent.componentsHeight += it.refreshHeight()
+            else it.height = 0.0f
+        }
+    }
+
+    fun render(context: DrawContext, mouseX: Int, mouseY: Int, delta: Float) {
+        if (isHovered(mouseX.toDouble(), mouseY.toDouble())) Render2DUtils.drawRect(context.matrices,
+            parent.x, parent.y + offset,
+            parent.width, parent.height,
+            ColorRGB(ClickGUI.red, ClickGUI.green, ClickGUI.blue, 60))
+
+        TextUtils.drawString(context, module.name.toString(),
+            parent.x + textOffset, parent.y + offset + textOffset,
+            if (module.isEnabled) ColorRGB(ClickGUI.red, ClickGUI.green, ClickGUI.blue)
+            else ColorRGB(255, 255, 255),
+            ClickGUI.shadow
+        )
+
+        textOffset = (parent.height / 2) - mc.textRenderer.fontHeight / 2
+
+        TextUtils.drawString(context, if (extended) "-" else "+",
+            parent.x + parent.width - mc.textRenderer.getWidth("+") - ((parent.height / 2.0f) - mc.textRenderer.fontHeight / 2.0f),
+            parent.y + offset + textOffset,
+            if (module.isEnabled) ColorRGB(ClickGUI.red, ClickGUI.green, ClickGUI.blue)
+            else ColorRGB(255, 255, 255),
+            ClickGUI.shadow
+        )
+
+        if (extended) {
+            refreshComponentsOffset()
+            components.forEach { it.render(context, mouseX, mouseY, delta) }
+        }
+
+        if (isHovered(mouseX.toDouble(), mouseY.toDouble())) {
+            BusterClickGUI.func = {
+                Render2DUtils.drawRect(
+                    context.matrices, 0f, mc.window.scaledHeight - (mc.textRenderer.fontHeight + 2.0f),
+                    mc.textRenderer.getWidth(module.description.toString()) + 4.0f, mc.textRenderer.fontHeight + 2.0f,
+                    ColorRGB(50, 50, 50, 255)
+                )
+
+                TextUtils.drawString(
+                    context, module.description.toString(),
+                    2.0f, mc.window.scaledHeight - (mc.textRenderer.fontHeight + 2.0f) + 1.0f,
+                    ColorRGB(255, 255, 255), ClickGUI.shadow
+                )
+            }
+        }
+    }
+
+    fun mouseClicked(mouseX: Double, mouseY: Double, button: Int) {
+        if (isHovered(mouseX, mouseY)) {
+            if (button == 0) {
+                module.toggle()
+            } else {
+                extended = !extended
+                updateAnimation()
+                parent.updateButtons()
+            }
+        }
+
+        if (extended) {
+            components.forEach { it.mouseClicked(mouseX, mouseY, button) }
+        }
+    }
+
+    private fun updateAnimation() {
+        components.forEach {
+            it.height = 0f
+        }
+    }
+
+    fun mouseReleased(mouseX: Double, mouseY: Double, button: Int) {
+        if (extended) {
+            components.forEach { it.mouseReleased(mouseX, mouseY, button) }
+        }
+    }
+
+    private fun isHovered(mouseX: Double, mouseY: Double): Boolean {
+        return mouseX > parent.x && mouseX < (parent.x + parent.width)
+                && mouseY > parent.y + offset && mouseY < (parent.y + offset + parent.height)
+    }
+
+    private fun refreshComponentsOffset() {
+        setOffset = parent.height
+        for (comp in components) {
+            if (!comp.setting.visibility.invoke()) continue
+            comp.offset = setOffset
+            setOffset += comp.height
+        }
+    }
+
+    fun keyReleased(keyCode: Int, scanCode: Int, modifiers: Int) {
+        components.forEach { it.keyReleased(keyCode, scanCode, modifiers) }
+    }
+
+}
