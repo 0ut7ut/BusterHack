@@ -10,7 +10,8 @@
     "mixin.KeyboardMixin",
     "mixin.ClientPlayNetworkHandlerMixin",
     "mixin.ClientConnectionMixin",
-    "mixin.ClientPlayerEntityMixin"
+    "mixin.ClientPlayerEntityMixin",
+    "mixin.TitleScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
